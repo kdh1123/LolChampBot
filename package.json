@@ -1,0 +1,19 @@
+{
+  "name": "lol-champ-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "deploy:commands": "tsx src/deployCommands.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "discord.js": "^14.21.0", "dotenv": "^16.6.1", "zod": "^3.24.1" },
+  "devDependencies": { "@eslint/js": "^9.31.0", "@types/node": "^22.15.3", "eslint": "^9.31.0", "prettier": "^3.6.2", "tsx": "^4.20.3", "typescript": "^5.8.3", "typescript-eslint": "^8.37.0", "vitest": "^3.2.4" }
+}

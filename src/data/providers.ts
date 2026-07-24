@@ -1,0 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import type { Champion, ChampionDataProvider, ChampionStats, ChampionStatsProvider, MatchupStats, Position } from '../domain.js';
+async function json<T>(name: string): Promise<T> { return JSON.parse(await readFile(new URL(`./${name}`, import.meta.url), 'utf8')) as T; }
+export class JsonChampionDataProvider implements ChampionDataProvider { async getChampions(): Promise<Champion[]> { return json<Champion[]>('champions.json'); } async getChampionById(id: string): Promise<Champion | null> { return (await this.getChampions()).find((champion) => champion.id === id) ?? null; } }
+export class JsonChampionStatsProvider implements ChampionStatsProvider { async getStats(position: Position): Promise<ChampionStats[]> { return (await json<ChampionStats[]>('stats.json')).filter((stat) => stat.position === position); } async getMatchups(championId: string, position: Position): Promise<MatchupStats[]> { return (await json<MatchupStats[]>('matchups.json')).filter((matchup) => matchup.championId === championId && matchup.position === position); } }

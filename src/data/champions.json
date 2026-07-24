@@ -1,0 +1,11 @@
+[
+  {"id":"annie","name":"애니","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Annie.png","positions":["미드"],"difficultyFactors":{"skillShot":1,"mechanics":1,"laning":1,"survival":2,"scaling":2,"decisionMaking":2}},
+  {"id":"malzahar","name":"말자하","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Malzahar.png","positions":["미드"],"difficultyFactors":{"skillShot":1,"mechanics":1,"laning":2,"survival":2,"scaling":2,"decisionMaking":2}},
+  {"id":"lux","name":"럭스","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Lux.png","positions":["미드","서포터"],"difficultyFactors":{"skillShot":2,"mechanics":1,"laning":2,"survival":2,"scaling":2,"decisionMaking":2}},
+  {"id":"swain","name":"스웨인","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Swain.png","positions":["미드","서포터"],"difficultyFactors":{"skillShot":2,"mechanics":2,"laning":2,"survival":2,"scaling":2,"decisionMaking":2}},
+  {"id":"ahri","name":"아리","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Ahri.png","positions":["미드"],"difficultyFactors":{"skillShot":2,"mechanics":2,"laning":2,"survival":2,"scaling":2,"decisionMaking":2}},
+  {"id":"vex","name":"벡스","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Vex.png","positions":["미드"],"difficultyFactors":{"skillShot":2,"mechanics":2,"laning":2,"survival":2,"scaling":2,"decisionMaking":2}},
+  {"id":"syndra","name":"신드라","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Syndra.png","positions":["미드"],"difficultyFactors":{"skillShot":3,"mechanics":3,"laning":2,"survival":3,"scaling":2,"decisionMaking":3}},
+  {"id":"akali","name":"아칼리","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Akali.png","positions":["미드","탑"],"difficultyFactors":{"skillShot":3,"mechanics":3,"laning":3,"survival":3,"scaling":2,"decisionMaking":3}},
+  {"id":"yasuo","name":"야스오","imageUrl":"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/Yasuo.png","positions":["미드","탑"],"difficultyFactors":{"skillShot":3,"mechanics":3,"laning":3,"survival":3,"scaling":3,"decisionMaking":3}}
+]

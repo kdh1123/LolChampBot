@@ -1,0 +1,8 @@
+[
+  {"championId":"annie","opponentId":"syndra","position":"미드","winRate":0.462,"opponentPickRate":0.068,"games":4200,"patch":"데모 15.1","tier":"에메랄드+"},
+  {"championId":"annie","opponentId":"akali","position":"미드","winRate":0.475,"opponentPickRate":0.071,"games":3900,"patch":"데모 15.1","tier":"에메랄드+"},
+  {"championId":"annie","opponentId":"yasuo","position":"미드","winRate":0.480,"opponentPickRate":0.094,"games":6000,"patch":"데모 15.1","tier":"에메랄드+"},
+  {"championId":"malzahar","opponentId":"akali","position":"미드","winRate":0.470,"opponentPickRate":0.071,"games":3600,"patch":"데모 15.1","tier":"에메랄드+"},
+  {"championId":"lux","opponentId":"yasuo","position":"미드","winRate":0.450,"opponentPickRate":0.094,"games":5100,"patch":"데모 15.1","tier":"에메랄드+"},
+  {"championId":"ahri","opponentId":"syndra","position":"미드","winRate":0.482,"opponentPickRate":0.068,"games":5800,"patch":"데모 15.1","tier":"에메랄드+"}
+]

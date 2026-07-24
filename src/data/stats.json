@@ -1,0 +1,11 @@
+[
+  {"championId":"annie","position":"미드","winRate":0.524,"pickRate":0.041,"games":18000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"간단한 스킬 구성과 확실한 군중 제어로 안정적인 진입이 가능합니다."},
+  {"championId":"malzahar","position":"미드","winRate":0.518,"pickRate":0.037,"games":16000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"라인 정리와 억제기로 운영 판단을 단순하게 만듭니다."},
+  {"championId":"lux","position":"미드","winRate":0.511,"pickRate":0.050,"games":24000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"긴 사거리로 안전한 교전 기회를 만들 수 있습니다."},
+  {"championId":"swain","position":"미드","winRate":0.509,"pickRate":0.030,"games":12000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"교전 지속력이 좋아 한타 역할이 명확합니다."},
+  {"championId":"ahri","position":"미드","winRate":0.515,"pickRate":0.083,"games":39000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"기동성과 로밍으로 다양한 상황에 대응합니다."},
+  {"championId":"vex","position":"미드","winRate":0.512,"pickRate":0.056,"games":25000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"돌진 조합을 상대로 명확한 카운터 플레이가 있습니다."},
+  {"championId":"syndra","position":"미드","winRate":0.505,"pickRate":0.068,"games":29000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"정밀한 스킬 활용으로 높은 폭발력을 발휘합니다."},
+  {"championId":"akali","position":"미드","winRate":0.498,"pickRate":0.071,"games":30000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"높은 기동성으로 사이드와 한타를 주도합니다."},
+  {"championId":"yasuo","position":"미드","winRate":0.492,"pickRate":0.094,"games":42000,"patch":"데모 15.1","tier":"에메랄드+","region":"KR","isSample":true,"reason":"숙련도에 따라 강력한 캐리 잠재력을 보입니다."}
+]
