@@ -1,16 +1,115 @@
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
-import { positions, type Champion, type ChampionDataProvider, type ChampionStats, type ChampionStatsProvider, type MatchupStats, type Position, type StatsProviderMetadata } from '../domain.js';
+import {
+  positions,
+  type Champion,
+  type ChampionDataProvider,
+  type ChampionStats,
+  type ChampionStatsProvider,
+  type MatchupStats,
+  type Position,
+  type StatsProviderMetadata,
+} from '../domain.js';
 
 const rate = z.number().min(0).max(1);
-const rawStatsSchema = z.object({ championId: z.string().min(1), position: z.enum(positions), winRate: rate, pickRate: rate, banRate: rate.optional(), games: z.number().nonnegative(), patch: z.string().min(1), tierRange: z.string().min(1).optional(), tier: z.string().min(1).optional(), region: z.string().min(1), updatedAt: z.string().min(1).optional(), source: z.string().min(1).optional(), isDemo: z.boolean().optional(), isSample: z.boolean().optional(), reason: z.string().default('') });
-const rawMatchupSchema = z.object({ championId: z.string(), opponentId: z.string(), position: z.enum(positions), championWinRate: rate.optional(), winRate: rate.optional(), opponentPickRate: rate, opponentBanRate: rate.optional(), games: z.number().nonnegative(), patch: z.string(), tierRange: z.string().optional(), tier: z.string().optional(), region: z.string().optional(), source: z.string().optional(), updatedAt: z.string().optional(), isDemo: z.boolean().optional() });
-async function json<T>(name: string): Promise<T> { return JSON.parse(await readFile(new URL(`./${name}`, import.meta.url), 'utf8')) as T; }
-export function parseChampionStats(value: unknown): ChampionStats { const stat = rawStatsSchema.parse(value); return { championId: stat.championId, position: stat.position, winRate: stat.winRate, pickRate: stat.pickRate, banRate: stat.banRate ?? 0, games: stat.games, patch: stat.patch, tierRange: stat.tierRange ?? stat.tier ?? '미상', region: stat.region, updatedAt: stat.updatedAt ?? '로컬 샘플', source: stat.source ?? '로컬 샘플 데이터', isDemo: stat.isDemo ?? stat.isSample ?? true, reason: stat.reason }; }
+const rawStatsSchema = z.object({
+  championId: z.string().min(1),
+  position: z.enum(positions),
+  winRate: rate,
+  pickRate: rate,
+  banRate: rate.optional(),
+  games: z.number().nonnegative(),
+  patch: z.string().min(1),
+  tierRange: z.string().min(1).optional(),
+  tier: z.string().min(1).optional(),
+  region: z.string().min(1),
+  updatedAt: z.string().min(1).optional(),
+  source: z.string().min(1).optional(),
+  isDemo: z.boolean().optional(),
+  isSample: z.boolean().optional(),
+  reason: z.string().default(''),
+});
+const rawMatchupSchema = z.object({
+  championId: z.string(),
+  opponentId: z.string(),
+  position: z.enum(positions),
+  championWinRate: rate.optional(),
+  winRate: rate.optional(),
+  opponentPickRate: rate,
+  opponentBanRate: rate.optional(),
+  games: z.number().nonnegative(),
+  patch: z.string(),
+  tierRange: z.string().optional(),
+  tier: z.string().optional(),
+  region: z.string().optional(),
+  source: z.string().optional(),
+  updatedAt: z.string().optional(),
+  isDemo: z.boolean().optional(),
+});
+async function json<T>(name: string): Promise<T> {
+  return JSON.parse(await readFile(new URL(`./${name}`, import.meta.url), 'utf8')) as T;
+}
+export function parseChampionStats(value: unknown): ChampionStats {
+  const stat = rawStatsSchema.parse(value);
+  return {
+    championId: stat.championId,
+    position: stat.position,
+    winRate: stat.winRate,
+    pickRate: stat.pickRate,
+    banRate: stat.banRate ?? 0,
+    games: stat.games,
+    patch: stat.patch,
+    tierRange: stat.tierRange ?? stat.tier ?? '미상',
+    region: stat.region,
+    updatedAt: stat.updatedAt ?? '로컬 샘플',
+    source: stat.source ?? '로컬 샘플 데이터',
+    isDemo: stat.isDemo ?? stat.isSample ?? true,
+    reason: stat.reason,
+  };
+}
 
-export class JsonChampionDataProvider implements ChampionDataProvider { async getChampions(): Promise<Champion[]> { return json<Champion[]>('champions.json'); } async getChampionById(id: string): Promise<Champion | null> { return (await this.getChampions()).find((champion) => champion.id === id) ?? null; } }
+export class JsonChampionDataProvider implements ChampionDataProvider {
+  async getChampions(): Promise<Champion[]> {
+    return json<Champion[]>('champions.json');
+  }
+  async getChampionById(id: string): Promise<Champion | null> {
+    return (await this.getChampions()).find((champion) => champion.id === id) ?? null;
+  }
+}
 export class JsonChampionStatsProvider implements ChampionStatsProvider {
-  async getStats(position: Position): Promise<ChampionStats[]> { return (await json<unknown[]>('stats.json')).map(parseChampionStats).filter((stat) => stat.position === position); }
-  async getMatchups(championId: string, position: Position): Promise<MatchupStats[]> { return (await json<unknown[]>('matchups.json')).map((value) => { const matchup = rawMatchupSchema.parse(value); return { championId: matchup.championId, opponentId: matchup.opponentId, position: matchup.position, championWinRate: matchup.championWinRate ?? matchup.winRate!, opponentPickRate: matchup.opponentPickRate, opponentBanRate: matchup.opponentBanRate, games: matchup.games, patch: matchup.patch, tierRange: matchup.tierRange ?? matchup.tier ?? '미상', region: matchup.region ?? '미상', source: matchup.source ?? '로컬 샘플 데이터', updatedAt: matchup.updatedAt ?? '로컬 샘플', isDemo: matchup.isDemo ?? true }; }).filter((matchup) => matchup.championId === championId && matchup.position === position); }
-  async getMetadata(): Promise<StatsProviderMetadata> { return { providerName: '로컬 샘플 데이터', sourceUrl: 'src/data/stats.json', isDemo: true, fetchedAt: '로컬 샘플' }; }
+  async getStats(position: Position): Promise<ChampionStats[]> {
+    return (await json<unknown[]>('stats.json'))
+      .map(parseChampionStats)
+      .filter((stat) => stat.position === position);
+  }
+  async getMatchups(championId: string, position: Position): Promise<MatchupStats[]> {
+    return (await json<unknown[]>('matchups.json'))
+      .map((value) => {
+        const matchup = rawMatchupSchema.parse(value);
+        return {
+          championId: matchup.championId,
+          opponentId: matchup.opponentId,
+          position: matchup.position,
+          championWinRate: matchup.championWinRate ?? matchup.winRate!,
+          opponentPickRate: matchup.opponentPickRate,
+          opponentBanRate: matchup.opponentBanRate,
+          games: matchup.games,
+          patch: matchup.patch,
+          tierRange: matchup.tierRange ?? matchup.tier ?? '미상',
+          region: matchup.region ?? '미상',
+          source: matchup.source ?? '로컬 샘플 데이터',
+          updatedAt: matchup.updatedAt ?? '로컬 샘플',
+          isDemo: matchup.isDemo ?? true,
+        };
+      })
+      .filter((matchup) => matchup.championId === championId && matchup.position === position);
+  }
+  async getMetadata(): Promise<StatsProviderMetadata> {
+    return {
+      providerName: '로컬 샘플 데이터',
+      sourceUrl: 'src/data/stats.json',
+      isDemo: true,
+      fetchedAt: '로컬 샘플',
+    };
+  }
 }

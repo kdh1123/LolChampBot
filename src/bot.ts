@@ -1,28 +1,312 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder, type ButtonInteraction, type ChatInputCommandInteraction, type Client, type StringSelectMenuInteraction } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  StringSelectMenuBuilder,
+  type ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type Client,
+  type StringSelectMenuInteraction,
+} from 'discord.js';
 import { difficulties, positions, type Difficulty, type Position } from './domain.js';
-import { RecommendationService, type Coverage, type RecommendationResult } from './services/recommendation.js';
+import {
+  RecommendationService,
+  type Coverage,
+  type RecommendationResult,
+} from './services/recommendation.js';
 import { MemorySessionStore } from './services/session.js';
 type ComponentInteraction = ButtonInteraction | StringSelectMenuInteraction;
 const componentId = (id: string, action: string, value = '') => `${id}:${action}:${value}`;
-const navigation = (id: string, includeDifficulty = true) => new ActionRowBuilder<ButtonBuilder>().addComponents(...(includeDifficulty ? [new ButtonBuilder().setCustomId(componentId(id, 'difficulty-back')).setLabel('다른 난이도 선택').setStyle(ButtonStyle.Secondary)] : []), new ButtonBuilder().setCustomId(componentId(id, 'position-back')).setLabel('다른 포지션 선택').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(componentId(id, 'coverage')).setLabel('현재 지원 범위 확인').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(componentId(id, 'end')).setLabel('종료').setStyle(ButtonStyle.Danger));
-const positionMenu = (id: string, coverage: Coverage[]) => new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(componentId(id, 'position')).setPlaceholder('포지션을 선택하세요').addOptions(positions.map((value) => ({ label: value, value, description: coverage.some((item) => item.position === value && item.count > 0) ? '추천 가능' : '준비 중' }))));
-const difficultyMenu = (id: string, position: Position, coverage: Coverage[]) => new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(componentId(id, 'difficulty')).setPlaceholder('난이도를 선택하세요').addOptions(difficulties.map((value) => { const count = coverage.find((item) => item.position === position && item.difficulty === value)?.count ?? 0; return { label: value, value, description: count ? `${count}명 추천 가능` : '준비 중 · 데이터 없음' }; })));
-const noDataEmbed = (result: Exclude<RecommendationResult, { status: 'success' }>) => new EmbedBuilder().setColor(0xfaa61a).setTitle('추천 데이터가 부족합니다').setDescription(`현재 **${result.position} · ${result.difficulty}** 조건에 맞는 챔피언 데이터가 없습니다.\n다른 조건을 선택하거나 추천을 종료해 주세요.`).addFields({ name: '현재 상태', value: result.status === 'stats_unavailable' ? '통계 제공자를 일시적으로 사용할 수 없습니다.' : result.availableDifficulties.length ? `선택한 포지션에서 사용 가능: ${result.availableDifficulties.join(', ')}` : '현재는 일부 포지션만 지원하고 있습니다.' });
-const coverageEmbed = (coverage: Coverage[]) => new EmbedBuilder().setColor(0x5865f2).setTitle('현재 추천 가능 범위').setDescription(positions.map((position) => { const available = coverage.filter((item) => item.position === position && item.count > 0); return available.length ? available.map((item) => `- ${position} · ${item.difficulty}: ${item.count}명`).join('\n') : `- ${position}: 준비 중`; }).join('\n'));
+const navigation = (id: string, includeDifficulty = true) =>
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    ...(includeDifficulty
+      ? [
+          new ButtonBuilder()
+            .setCustomId(componentId(id, 'difficulty-back'))
+            .setLabel('다른 난이도 선택')
+            .setStyle(ButtonStyle.Secondary),
+        ]
+      : []),
+    new ButtonBuilder()
+      .setCustomId(componentId(id, 'position-back'))
+      .setLabel('다른 포지션 선택')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(componentId(id, 'coverage'))
+      .setLabel('현재 지원 범위 확인')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(componentId(id, 'end'))
+      .setLabel('종료')
+      .setStyle(ButtonStyle.Danger),
+  );
+const positionMenu = (id: string, coverage: Coverage[]) =>
+  new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(componentId(id, 'position'))
+      .setPlaceholder('포지션을 선택하세요')
+      .addOptions(
+        positions.map((value) => ({
+          label: value,
+          value,
+          description: coverage.some((item) => item.position === value && item.count > 0)
+            ? '추천 가능'
+            : '준비 중',
+        })),
+      ),
+  );
+const difficultyMenu = (id: string, position: Position, coverage: Coverage[]) =>
+  new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(componentId(id, 'difficulty'))
+      .setPlaceholder('난이도를 선택하세요')
+      .addOptions(
+        difficulties.map((value) => {
+          const count =
+            coverage.find((item) => item.position === position && item.difficulty === value)
+              ?.count ?? 0;
+          return {
+            label: value,
+            value,
+            description: count ? `${count}명 추천 가능` : '준비 중 · 데이터 없음',
+          };
+        }),
+      ),
+  );
+const noDataEmbed = (result: Exclude<RecommendationResult, { status: 'success' }>) =>
+  new EmbedBuilder()
+    .setColor(0xfaa61a)
+    .setTitle('추천 데이터가 부족합니다')
+    .setDescription(
+      `현재 **${result.position} · ${result.difficulty}** 조건에 맞는 챔피언 데이터가 없습니다.\n다른 조건을 선택하거나 추천을 종료해 주세요.`,
+    )
+    .addFields({
+      name: '현재 상태',
+      value:
+        result.status === 'stats_unavailable'
+          ? '통계 제공자를 일시적으로 사용할 수 없습니다.'
+          : result.availableDifficulties.length
+            ? `선택한 포지션에서 사용 가능: ${result.availableDifficulties.join(', ')}`
+            : '현재는 일부 포지션만 지원하고 있습니다.',
+    });
+const coverageEmbed = (coverage: Coverage[]) =>
+  new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setTitle('현재 추천 가능 범위')
+    .setDescription(
+      positions
+        .map((position) => {
+          const available = coverage.filter((item) => item.position === position && item.count > 0);
+          return available.length
+            ? available
+                .map((item) => `- ${position} · ${item.difficulty}: ${item.count}명`)
+                .join('\n')
+            : `- ${position}: 준비 중`;
+        })
+        .join('\n'),
+    );
 
 export class DiscordRecommendationController {
-  constructor(private readonly service: RecommendationService, private readonly sessions: MemorySessionStore) {}
-  async start(interaction: ChatInputCommandInteraction): Promise<void> { const session = this.sessions.create({ userId: interaction.user.id, guildId: interaction.guildId ?? undefined, channelId: interaction.channelId, recommendedChampionIds: [] }); const coverage = await this.service.coverage(); await interaction.reply({ content: '롤챔봇입니다. 플레이할 포지션을 선택해 주세요.', components: [positionMenu(session.id, coverage)], ephemeral: false }); }
-  async handle(interaction: ComponentInteraction): Promise<void> { const [sessionId, action, value] = interaction.customId.split(':'); const session = this.sessions.get(sessionId); if (!session) { await interaction.reply({ content: '이 추천 세션은 만료되었습니다. `/챔피언추천`으로 다시 시작해 주세요.', ephemeral: true }); return; } if (session.userId !== interaction.user.id) { await interaction.reply({ content: '이 추천은 명령어를 실행한 사용자만 조작할 수 있습니다.', ephemeral: true }); return; } const selected = interaction.isStringSelectMenu() ? interaction.values[0] : value;
-    if (action === 'coverage') { await interaction.reply({ embeds: [coverageEmbed(await this.service.coverage())], ephemeral: true }); return; }
-    if (action === 'end') { this.sessions.delete(sessionId); await interaction.update({ content: '추천을 종료했습니다. `/챔피언추천`으로 새 추천을 시작할 수 있습니다.', embeds: [], components: [] }); return; }
-    if (action === 'position' || action === 'position-back') { const position = action === 'position' ? selected as Position : undefined; this.sessions.update(sessionId, { selectedPosition: position, selectedDifficulty: undefined, recommendedChampionIds: [], selectedChampionId: undefined }); const coverage = await this.service.coverage(); if (!position) { await interaction.update({ content: '포지션을 다시 선택해 주세요.', embeds: [], components: [positionMenu(sessionId, coverage)] }); return; } await interaction.update({ content: `${position} 포지션을 선택했습니다. 난이도를 선택해 주세요.`, embeds: [], components: [difficultyMenu(sessionId, position, coverage), navigation(sessionId, false)] }); return; }
-    if (action === 'difficulty-back') { const coverage = await this.service.coverage(); this.sessions.update(sessionId, { selectedDifficulty: undefined, recommendedChampionIds: [], selectedChampionId: undefined }); await interaction.update({ content: '난이도를 다시 선택해 주세요.', embeds: [], components: [difficultyMenu(sessionId, session.selectedPosition!, coverage), navigation(sessionId, false)] }); return; }
-    if (action === 'difficulty') { await this.showRecommendations(interaction, sessionId, selected as Difficulty); return; }
-    if (action === 'champion') { await this.showBans(interaction, sessionId, selected); return; }
-    if (action === 'retry' && session.selectedDifficulty) { await this.showRecommendations(interaction, sessionId, session.selectedDifficulty); }
+  constructor(
+    private readonly service: RecommendationService,
+    private readonly sessions: MemorySessionStore,
+  ) {}
+  async start(interaction: ChatInputCommandInteraction): Promise<void> {
+    const session = this.sessions.create({
+      userId: interaction.user.id,
+      guildId: interaction.guildId ?? undefined,
+      channelId: interaction.channelId,
+      recommendedChampionIds: [],
+    });
+    const coverage = await this.service.coverage();
+    await interaction.reply({
+      content: '롤챔봇입니다. 플레이할 포지션을 선택해 주세요.',
+      components: [positionMenu(session.id, coverage)],
+      ephemeral: false,
+    });
   }
-  private async showRecommendations(interaction: ComponentInteraction, sessionId: string, difficulty: Difficulty): Promise<void> { const session = this.sessions.get(sessionId)!; const result = await this.service.recommendResult(session.selectedPosition!, difficulty); this.sessions.update(sessionId, { selectedDifficulty: difficulty, recommendedChampionIds: result.status === 'success' ? result.recommendations.map((item) => item.champion.id) : [], selectedChampionId: undefined }); if (result.status !== 'success') { await interaction.update({ content: '추천 조건을 바꾸어 다시 시도할 수 있습니다.', embeds: [noDataEmbed(result)], components: [navigation(sessionId)] }); return; } const results = result.recommendations; const embed = new EmbedBuilder().setColor(0x5865f2).setTitle(`${session.selectedPosition} · ${difficulty} 추천`).setDescription(`현재 조건에서 추천 가능한 챔피언 ${results.length}명을 찾았습니다.\n데모 통계이며 실제 경쟁전 데이터와 다를 수 있습니다.`).setImage(results[0].champion.imageUrl).addFields(results.map((item, index) => ({ name: `${index + 1}. ${item.champion.name} · ${difficulty}`, value: `승률 **${(item.stats.winRate * 100).toFixed(1)}%** · 픽률 **${(item.stats.pickRate * 100).toFixed(1)}%** · 밴률 **${(item.stats.banRate * 100).toFixed(1)}%**\n표본 ${item.stats.games.toLocaleString()}게임 · ${item.stats.reason}\n출처: ${item.stats.source}\n기준: ${item.stats.region} · ${item.stats.tierRange} · ${item.stats.patch}\n갱신: ${item.stats.updatedAt}${item.stats.isDemo ? ' · 데모 데이터' : ''}`, inline: false }))); const choices = new ActionRowBuilder<ButtonBuilder>().addComponents(results.map((item, index) => new ButtonBuilder().setCustomId(componentId(sessionId, 'champion', item.champion.id)).setLabel(`${index + 1}. ${item.champion.name}`).setStyle(ButtonStyle.Primary))); await interaction.update({ content: '추천 챔피언을 하나 선택하면 밴 후보를 알려드릴게요.', embeds: [embed], components: [choices, navigation(sessionId)] }); }
-  private async showBans(interaction: ComponentInteraction, sessionId: string, championId: string): Promise<void> { const session = this.sessions.get(sessionId)!; this.sessions.update(sessionId, { selectedChampionId: championId }); const bans = await this.service.banRecommendations(championId, session.selectedPosition!); const champion = (await this.service.getChampion(championId))!; const embed = new EmbedBuilder().setColor(0xed4245).setTitle(`${champion.name} 밴 추천 · ${session.selectedPosition}`).setDescription('데모 데이터 · 승률의 주체는 선택한 챔피언입니다.').setImage(bans[0]?.champion.imageUrl ?? champion.imageUrl).addFields(bans.map((ban, index) => ({ name: `${index + 1}. ${ban.champion.name}`, value: `${champion.name}의 ${ban.champion.name} 상대 승률: **${(ban.matchup.championWinRate * 100).toFixed(1)}%**\n상대 픽률 ${(ban.matchup.opponentPickRate * 100).toFixed(1)}% · ${ban.matchup.games.toLocaleString()}경기\n${ban.matchup.patch} · ${ban.matchup.tierRange}`, inline: false }))).setFooter({ text: bans.length ? '동일 포지션 매치업만 사용했습니다.' : '해당 챔피언의 밴 데모 데이터가 없습니다.' }); await interaction.update({ content: '밴 추천 결과입니다.', embeds: [embed], components: [navigation(sessionId)] }); }
+  async handle(interaction: ComponentInteraction): Promise<void> {
+    const [sessionId, action, value] = interaction.customId.split(':');
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      await interaction.reply({
+        content: '이 추천 세션은 만료되었습니다. `/챔피언추천`으로 다시 시작해 주세요.',
+        ephemeral: true,
+      });
+      return;
+    }
+    if (session.userId !== interaction.user.id) {
+      await interaction.reply({
+        content: '이 추천은 명령어를 실행한 사용자만 조작할 수 있습니다.',
+        ephemeral: true,
+      });
+      return;
+    }
+    const selected = interaction.isStringSelectMenu() ? interaction.values[0] : value;
+    if (action === 'coverage') {
+      await interaction.reply({
+        embeds: [coverageEmbed(await this.service.coverage())],
+        ephemeral: true,
+      });
+      return;
+    }
+    if (action === 'end') {
+      this.sessions.delete(sessionId);
+      await interaction.update({
+        content: '추천을 종료했습니다. `/챔피언추천`으로 새 추천을 시작할 수 있습니다.',
+        embeds: [],
+        components: [],
+      });
+      return;
+    }
+    if (action === 'position' || action === 'position-back') {
+      const position = action === 'position' ? (selected as Position) : undefined;
+      this.sessions.update(sessionId, {
+        selectedPosition: position,
+        selectedDifficulty: undefined,
+        recommendedChampionIds: [],
+        selectedChampionId: undefined,
+      });
+      const coverage = await this.service.coverage();
+      if (!position) {
+        await interaction.update({
+          content: '포지션을 다시 선택해 주세요.',
+          embeds: [],
+          components: [positionMenu(sessionId, coverage)],
+        });
+        return;
+      }
+      await interaction.update({
+        content: `${position} 포지션을 선택했습니다. 난이도를 선택해 주세요.`,
+        embeds: [],
+        components: [difficultyMenu(sessionId, position, coverage), navigation(sessionId, false)],
+      });
+      return;
+    }
+    if (action === 'difficulty-back') {
+      const coverage = await this.service.coverage();
+      this.sessions.update(sessionId, {
+        selectedDifficulty: undefined,
+        recommendedChampionIds: [],
+        selectedChampionId: undefined,
+      });
+      await interaction.update({
+        content: '난이도를 다시 선택해 주세요.',
+        embeds: [],
+        components: [
+          difficultyMenu(sessionId, session.selectedPosition!, coverage),
+          navigation(sessionId, false),
+        ],
+      });
+      return;
+    }
+    if (action === 'difficulty') {
+      await this.showRecommendations(interaction, sessionId, selected as Difficulty);
+      return;
+    }
+    if (action === 'champion') {
+      await this.showBans(interaction, sessionId, selected);
+      return;
+    }
+    if (action === 'retry' && session.selectedDifficulty) {
+      await this.showRecommendations(interaction, sessionId, session.selectedDifficulty);
+    }
+  }
+  private async showRecommendations(
+    interaction: ComponentInteraction,
+    sessionId: string,
+    difficulty: Difficulty,
+  ): Promise<void> {
+    const session = this.sessions.get(sessionId)!;
+    const result = await this.service.recommendResult(session.selectedPosition!, difficulty);
+    this.sessions.update(sessionId, {
+      selectedDifficulty: difficulty,
+      recommendedChampionIds:
+        result.status === 'success' ? result.recommendations.map((item) => item.champion.id) : [],
+      selectedChampionId: undefined,
+    });
+    if (result.status !== 'success') {
+      await interaction.update({
+        content: '추천 조건을 바꾸어 다시 시도할 수 있습니다.',
+        embeds: [noDataEmbed(result)],
+        components: [navigation(sessionId)],
+      });
+      return;
+    }
+    const results = result.recommendations;
+    const embed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle(`${session.selectedPosition} · ${difficulty} 추천`)
+      .setDescription(
+        `현재 조건에서 추천 가능한 챔피언 ${results.length}명을 찾았습니다.\n데모 통계이며 실제 경쟁전 데이터와 다를 수 있습니다.`,
+      )
+      .setImage(results[0].champion.imageUrl)
+      .addFields(
+        results.map((item, index) => ({
+          name: `${index + 1}. ${item.champion.name} · ${difficulty}`,
+          value: `승률 **${(item.stats.winRate * 100).toFixed(1)}%** · 픽률 **${(item.stats.pickRate * 100).toFixed(1)}%** · 밴률 **${(item.stats.banRate * 100).toFixed(1)}%**\n표본 ${item.stats.games.toLocaleString()}게임 · ${item.stats.reason}\n출처: ${item.stats.source}\n기준: ${item.stats.region} · ${item.stats.tierRange} · ${item.stats.patch}\n갱신: ${item.stats.updatedAt}${item.stats.isDemo ? ' · 데모 데이터' : ''}`,
+          inline: false,
+        })),
+      );
+    const choices = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      results.map((item, index) =>
+        new ButtonBuilder()
+          .setCustomId(componentId(sessionId, 'champion', item.champion.id))
+          .setLabel(`${index + 1}. ${item.champion.name}`)
+          .setStyle(ButtonStyle.Primary),
+      ),
+    );
+    await interaction.update({
+      content: '추천 챔피언을 하나 선택하면 밴 후보를 알려드릴게요.',
+      embeds: [embed],
+      components: [choices, navigation(sessionId)],
+    });
+  }
+  private async showBans(
+    interaction: ComponentInteraction,
+    sessionId: string,
+    championId: string,
+  ): Promise<void> {
+    const session = this.sessions.get(sessionId)!;
+    this.sessions.update(sessionId, { selectedChampionId: championId });
+    const bans = await this.service.banRecommendations(championId, session.selectedPosition!);
+    const champion = (await this.service.getChampion(championId))!;
+    const embed = new EmbedBuilder()
+      .setColor(0xed4245)
+      .setTitle(`${champion.name} 밴 추천 · ${session.selectedPosition}`)
+      .setDescription('데모 데이터 · 승률의 주체는 선택한 챔피언입니다.')
+      .setImage(bans[0]?.champion.imageUrl ?? champion.imageUrl)
+      .addFields(
+        bans.map((ban, index) => ({
+          name: `${index + 1}. ${ban.champion.name}`,
+          value: `${champion.name}의 ${ban.champion.name} 상대 승률: **${(ban.matchup.championWinRate * 100).toFixed(1)}%**\n상대 픽률 ${(ban.matchup.opponentPickRate * 100).toFixed(1)}% · ${ban.matchup.games.toLocaleString()}경기\n${ban.matchup.patch} · ${ban.matchup.tierRange}`,
+          inline: false,
+        })),
+      )
+      .setFooter({
+        text: bans.length
+          ? '동일 포지션 매치업만 사용했습니다.'
+          : '해당 챔피언의 밴 데모 데이터가 없습니다.',
+      });
+    await interaction.update({
+      content: '밴 추천 결과입니다.',
+      embeds: [embed],
+      components: [navigation(sessionId)],
+    });
+  }
 }
-export function wireBot(client: Client, controller: DiscordRecommendationController): void { client.on('interactionCreate', async (interaction) => { try { if (interaction.isChatInputCommand() && interaction.commandName === '챔피언추천') await controller.start(interaction); else if (interaction.isButton() || interaction.isStringSelectMenu()) await controller.handle(interaction); } catch (error) { console.error(error); if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) await interaction.reply({ content: '처리 중 오류가 발생했습니다.', ephemeral: true }); } }); }
+export function wireBot(client: Client, controller: DiscordRecommendationController): void {
+  client.on('interactionCreate', async (interaction) => {
+    try {
+      if (interaction.isChatInputCommand() && interaction.commandName === '챔피언추천')
+        await controller.start(interaction);
+      else if (interaction.isButton() || interaction.isStringSelectMenu())
+        await controller.handle(interaction);
+    } catch (error) {
+      console.error(error);
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred)
+        await interaction.reply({ content: '처리 중 오류가 발생했습니다.', ephemeral: true });
+    }
+  });
+}
