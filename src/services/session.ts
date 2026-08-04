@@ -22,7 +22,10 @@ export class MemorySessionStore implements SessionStore {
   }
   get(id: string): RecommendationSession | null {
     const session = this.sessions.get(id);
-    return !session || session.expiresAt <= Date.now() ? null : session;
+    if (!session) return null;
+    if (session.expiresAt > Date.now()) return session;
+    this.sessions.delete(id);
+    return null;
   }
   update(id: string, patch: Partial<RecommendationSession>): RecommendationSession | null {
     const session = this.get(id);

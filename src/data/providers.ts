@@ -49,6 +49,10 @@ const rawMatchupSchema = z.object({
 async function json<T>(name: string): Promise<T> {
   return JSON.parse(await readFile(new URL(`./${name}`, import.meta.url), 'utf8')) as T;
 }
+
+function optional<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
 export function parseChampionStats(value: unknown): ChampionStats {
   const stat = rawStatsSchema.parse(value);
   return {
@@ -56,53 +60,62 @@ export function parseChampionStats(value: unknown): ChampionStats {
     position: stat.position,
     winRate: stat.winRate,
     pickRate: stat.pickRate,
-    banRate: stat.banRate ?? 0,
+    banRate: optional(stat.banRate, 0),
     games: stat.games,
     patch: stat.patch,
     tierRange: stat.tierRange ?? stat.tier ?? '미상',
     region: stat.region,
-    updatedAt: stat.updatedAt ?? '로컬 샘플',
-    source: stat.source ?? '로컬 샘플 데이터',
+    updatedAt: optional(stat.updatedAt, '로컬 샘플'),
+    source: optional(stat.source, '로컬 샘플 데이터'),
     isDemo: stat.isDemo ?? stat.isSample ?? true,
     reason: stat.reason,
   };
 }
 
+function parseMatchup(value: unknown): MatchupStats {
+  const matchup = rawMatchupSchema.parse(value);
+  return {
+    championId: matchup.championId,
+    opponentId: matchup.opponentId,
+    position: matchup.position,
+    championWinRate: matchup.championWinRate ?? matchup.winRate!,
+    opponentPickRate: matchup.opponentPickRate,
+    opponentBanRate: matchup.opponentBanRate,
+    games: matchup.games,
+    patch: matchup.patch,
+    tierRange: matchup.tierRange ?? matchup.tier ?? '미상',
+    region: optional(matchup.region, '미상'),
+    source: optional(matchup.source, '로컬 샘플 데이터'),
+    updatedAt: optional(matchup.updatedAt, '로컬 샘플'),
+    isDemo: optional(matchup.isDemo, true),
+  };
+}
+
 export class JsonChampionDataProvider implements ChampionDataProvider {
+  private readonly champions = json<Champion[]>('champions.json');
+
   async getChampions(): Promise<Champion[]> {
-    return json<Champion[]>('champions.json');
+    return this.champions;
   }
   async getChampionById(id: string): Promise<Champion | null> {
     return (await this.getChampions()).find((champion) => champion.id === id) ?? null;
   }
 }
 export class JsonChampionStatsProvider implements ChampionStatsProvider {
+  private readonly stats = json<unknown[]>('stats.json').then((values) =>
+    values.map(parseChampionStats),
+  );
+  private readonly matchups = json<unknown[]>('matchups.json').then((values) =>
+    values.map(parseMatchup),
+  );
+
   async getStats(position: Position): Promise<ChampionStats[]> {
-    return (await json<unknown[]>('stats.json'))
-      .map(parseChampionStats)
-      .filter((stat) => stat.position === position);
+    return (await this.stats).filter((stat) => stat.position === position);
   }
   async getMatchups(championId: string, position: Position): Promise<MatchupStats[]> {
-    return (await json<unknown[]>('matchups.json'))
-      .map((value) => {
-        const matchup = rawMatchupSchema.parse(value);
-        return {
-          championId: matchup.championId,
-          opponentId: matchup.opponentId,
-          position: matchup.position,
-          championWinRate: matchup.championWinRate ?? matchup.winRate!,
-          opponentPickRate: matchup.opponentPickRate,
-          opponentBanRate: matchup.opponentBanRate,
-          games: matchup.games,
-          patch: matchup.patch,
-          tierRange: matchup.tierRange ?? matchup.tier ?? '미상',
-          region: matchup.region ?? '미상',
-          source: matchup.source ?? '로컬 샘플 데이터',
-          updatedAt: matchup.updatedAt ?? '로컬 샘플',
-          isDemo: matchup.isDemo ?? true,
-        };
-      })
-      .filter((matchup) => matchup.championId === championId && matchup.position === position);
+    return (await this.matchups).filter(
+      (matchup) => matchup.championId === championId && matchup.position === position,
+    );
   }
   async getMetadata(): Promise<StatsProviderMetadata> {
     return {

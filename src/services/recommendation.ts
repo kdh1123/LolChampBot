@@ -71,6 +71,7 @@ export type RecommendationResult =
     };
 
 type Candidate = { champion: Champion; stats: ChampionStats };
+type ChampionIndex = Map<string, Champion>;
 
 export class RecommendationService {
   constructor(
@@ -85,7 +86,7 @@ export class RecommendationService {
         positions.map(async (position) => [position, await this.safeStats(position)] as const),
       ),
     ]);
-    const championsById = new Map(all.map((champion) => [champion.id, champion]));
+    const championsById = this.indexChampions(all);
     return byPosition.flatMap(([position, stats]) =>
       difficulties.map((difficulty) => ({
         position,
@@ -99,15 +100,29 @@ export class RecommendationService {
     difficulty: Difficulty,
     limit = 4,
   ): Promise<RecommendationResult> {
-    let stats: ChampionStats[];
-    try {
-      stats = await this.stats.getStats(position);
-    } catch {
+    const [champions, stats] = await Promise.allSettled([
+      this.champions.getChampions(),
+      this.stats.getStats(position),
+    ]);
+    if (stats.status === 'rejected') {
       return { status: 'stats_unavailable', position, difficulty, availableDifficulties: [] };
     }
-    const championsById = new Map(
-      (await this.champions.getChampions()).map((champion) => [champion.id, champion]),
+    if (champions.status === 'rejected') throw champions.reason;
+    return this.recommendFromStats(
+      this.indexChampions(champions.value),
+      stats.value,
+      position,
+      difficulty,
+      limit,
     );
+  }
+  private recommendFromStats(
+    championsById: ChampionIndex,
+    stats: ChampionStats[],
+    position: Position,
+    difficulty: Difficulty,
+    limit: number,
+  ): RecommendationResult {
     const candidates = this.candidates(championsById, stats, position, difficulty);
     const availableDifficulties = difficulties.filter(
       (value) => this.candidates(championsById, stats, position, value).length > 0,
@@ -135,7 +150,7 @@ export class RecommendationService {
     }
   }
   private candidates(
-    championsById: Map<string, Champion>,
+    championsById: ChampionIndex,
     stats: ChampionStats[],
     position: Position,
     difficulty: Difficulty,
@@ -148,6 +163,9 @@ export class RecommendationService {
         ? [{ champion, stats: stat }]
         : [];
     });
+  }
+  private indexChampions(champions: Champion[]): ChampionIndex {
+    return new Map(champions.map((champion) => [champion.id, champion]));
   }
   private scoreCandidates(candidates: Candidate[]): Recommendation[] {
     const winRange = range(candidates.map((item) => item.stats.winRate));
@@ -187,11 +205,12 @@ export class RecommendationService {
       this.stats.getMatchups(championId, position),
     ]);
     if (!matchups.length) return [];
+    const championsById = this.indexChampions(all);
     const gameRange = range(matchups.map((matchup) => Math.log1p(matchup.games)));
     const pickRange = range(matchups.map((matchup) => matchup.opponentPickRate));
     return matchups
       .flatMap((matchup) => {
-        const champion = all.find((c) => c.id === matchup.opponentId);
+        const champion = championsById.get(matchup.opponentId);
         if (!champion || !champion.positions.includes(position)) return [];
         const score =
           (1 - matchup.championWinRate) * 0.6 +
